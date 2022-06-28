@@ -1,12 +1,16 @@
 version: '2'
 services:
     postgis:
-        build:
-            context: .
-            dockerfile: Dockerfile.postgis
+        image: postgis/postgis:12-3.0-alpine
+        container_name: postgis
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
         environment:
-            - POSTGRES_USER=${DB_USER}
-            - POSTGRES_PASSWORD=${DB_PASS}
+            - POSTGRES_USER=postgres
+            - POSTGRES_PASSWORD=postgres
             - POSTGRES_DB=bonn
         ports:
             - "5432:5432"
@@ -19,3 +23,23 @@ services:
             - "8080:8080"
         depends_on:
             - "postgis"
+
+    migration:
+        image: postgis/postgis:12-3.0-alpine
+        container_name: migration
+        depends_on:
+            postgis:
+                condition: service_healthy
+
+        environment:
+            PGUSER: postgres
+            PGPASSWORD: postgres
+        command: 
+        - /bin/bash
+        - -c
+        - |
+            wget "https://github.com/go-spatial/tegola-testdata/raw/master/tegola.dump" 
+            psql -h postgis -p 5432 -U postgres -d postgres -c "DROP DATABASE IF EXISTS tegola;"
+            pg_restore -h postgis -p 5432 -U postgres -d postgres -C tegola.dump
+            psql -h postgis -U postgres -d postgres -c "DROP ROLE IF EXISTS tegola_no_access;CREATE ROLE tegola_no_access LOGIN PASSWORD 'postgres'"
+            rm tegola.dump
