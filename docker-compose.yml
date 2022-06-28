@@ -1,0 +1,21 @@
+version: '2'
+services:
+    postgis:
+        build:
+            context: .
+            dockerfile: Dockerfile.postgis
+        environment:
+            - POSTGRES_USER=${DB_USER}
+            - POSTGRES_PASSWORD=${DB_PASS}
+            - POSTGRES_DB=bonn
+        ports:
+            - "5432:5432"
+
+    tegola:
+        build:
+            context: .
+            dockerfile: Dockerfile.tegola
+        ports:
+            - "8080:8080"
+        depends_on:
+            - "postgis"

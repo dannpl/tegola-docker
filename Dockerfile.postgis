@@ -1,0 +1,10 @@
+# --- Create minimal image to download the data
+FROM alpine:3.7 AS data
+RUN apk update
+RUN apk add wget
+RUN wget https://github.com/go-spatial/tegola-example-data/raw/master/bonn_osm.sql.tar.gz
+RUN tar xzf bonn_osm.sql.tar.gz
+
+# --- Create the sample data
+FROM mdillon/postgis:9.6
+COPY --from=data bonn_osm.dump /docker-entrypoint-initdb.d/
